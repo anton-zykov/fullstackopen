@@ -1,0 +1,16 @@
+note over browser:
+after hitting the button 
+the js code recieved previously
+updates the list and afterwards 
+sends the POST request
+end note
+
+browser->server: HTTP POST https://studies.cs.helsinki.fi/exampleapp/new_note_spa
+
+note over server:
+server processes the recieved note
+and adds it to the database
+so the note is not lost
+end note
+
+server-->browser: HTTP Status Code 201 and {"message":"note created"}
