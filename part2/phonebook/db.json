@@ -22,8 +22,28 @@
     },
     {
       "name": "Arto",
-      "number": "23423",
+      "number": "99999",
       "id": 10
+    },
+    {
+      "name": "Alias",
+      "number": "99-241-4235532",
+      "id": 11
+    },
+    {
+      "name": "Harry Potter",
+      "number": "2325-344235",
+      "id": 13
+    },
+    {
+      "name": "Ron Weasley",
+      "number": "65-28294",
+      "id": 14
+    },
+    {
+      "name": "Berta Lara",
+      "number": "00-12-23523",
+      "id": 15
     }
   ]
 }

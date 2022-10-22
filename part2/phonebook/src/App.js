@@ -1,55 +1,20 @@
 import { useState, useEffect } from 'react'
 import dataService from './services/server-communication'
 import './index.css'
-
-const Filter = (props) =>
-  <p>filter shown with <input value={props.filterName} onChange={props.handleFilterChange} /></p>
-
-const PersonForm = (props) => (
-  <form onSubmit={props.addNameNumber}>
-    <div>
-      name: <input value={props.newName} onChange={props.handleNameChange} />
-    </div>
-    <div>
-      number: <input value={props.newNumber} onChange={props.handleNumberChange} />
-    </div>
-    <div>
-      <button type="submit">add</button>
-    </div>
-  </form>
-)
-
-const NamePhoneLine = ({ person, deletePerson }) =>
-  <p>
-    {person.name} {person.number} <button type="button" onClick={deletePerson(person)}>delete</button>
-  </p>
-
-const Persons = ({ filteredPersons, deletePerson }) => 
-  filteredPersons.map(person => <NamePhoneLine key={person.name} person={person} deletePerson={deletePerson} />)
-
-const Notification = ({ message }) => {
-  if (message === null) {
-    return null
-  }
-  return (
-    <div className='success'>
-      {message}
-    </div>
-  )
-}
-
-const ErrorNotification = ({ message }) => {
-  if (message === null) {
-    return null
-  }
-  return (
-    <div className='error'>
-      {message}
-    </div>
-  )
-}
+import { PersonForm } from './components/PersonForm'
+import { SuccessNotification, ErrorNotification } from './components/Notifications'
+import { Persons } from './components/PhoneLines'
+import { Filter } from './components/Filter'
 
 const App = () => {
+  const [persons, setPersons] = useState([])
+  const [filteredPersons, setFilteredPersons] = useState([])
+  const [newName, setNewName] = useState('')
+  const [newNumber, setNewNumber] = useState('')
+  const [filterName, setFilterName] = useState('')
+  const [successMessage, setSuccessMessage] = useState(null)
+  const [errorMessage, setErrorMessage] = useState(null)
+
   useEffect(() => {
     dataService
       .getAll()
@@ -59,47 +24,45 @@ const App = () => {
       })
   }, [])
 
-  const [persons, setPersons] = useState([])
-  const [filteredPersons, setFilteredPersons] = useState([])
-  const [newName, setNewName] = useState('')
-  const [newNumber, setNewNumber] = useState('')
-  const [filterName, setFilterName] = useState('')
-  const [successMessage, setSuccessMessage] = useState(null)
-  const [errorMessage, setErrorMessage] = useState(null)
+  useEffect(() => {
+    setFilteredPersons(persons.filter(person => person.name.toLowerCase().includes(filterName.toLowerCase())))
+  }, [persons, filterName])
 
   const addNameNumber = (event) => {
     event.preventDefault()
-    if (persons.filter(person => person.name === newName).length === 0) {
+    const personWithANewName = persons.filter(person => person.name === newName)
+    if (personWithANewName.length === 0) {
       const newPersonObject = {
         name: newName, 
         number: newNumber
       }
       dataService.create(newPersonObject)
-        .then(() => dataService.getAll())
-        .then(allPhones => {
-          setPersons(allPhones)
-          setFilteredPersons(allPhones.filter(person => person.name.toLowerCase().includes(filterName.toLowerCase())))
+        .then(() => {
+          setPersons(persons.concat(newPersonObject))
           setSuccessMessage(`${newPersonObject.name} has been successfully added.`)
           setTimeout(() => {
             setSuccessMessage(null)
           }, 5000)
+          setNewName('')
+          setNewNumber('')
         })
     }
     else {
       if (window.confirm(`${newName} has already been added to the phonebook. Replace the old number with the new one?`)) {
-        const oldPerson = persons.filter(person => person.name === newName)[0]
-        dataService.update(oldPerson.id, { ...oldPerson, number: newNumber })
-          .then(() => dataService.getAll())
-          .then(allPhones => {
-            setPersons(allPhones)
-            setFilteredPersons(allPhones.filter(person => person.name.toLowerCase().includes(filterName.toLowerCase())))
-            setSuccessMessage(`${oldPerson.name}'s number has been successfully updated.`)
+        const oldPersonObject = personWithANewName[0]
+        const newPersonObject = { ...oldPersonObject, number: newNumber }
+        dataService.update(oldPersonObject.id, newPersonObject)
+          .then(() => {
+            setPersons(persons.map(person => person.id === oldPersonObject.id ? newPersonObject : person))
+            setSuccessMessage(`${oldPersonObject.name}'s number has been successfully updated.`)
             setTimeout(() => {
               setSuccessMessage(null)
             }, 5000)
+            setNewName('')
+            setNewNumber('')
           })
           .catch(() => {
-            setErrorMessage(`${oldPerson.name} has already been deleted.`)
+            setErrorMessage(`${oldPersonObject.name} has already been deleted.`)
             setTimeout(() => {
               setErrorMessage(null)
             }, 5000)
@@ -114,18 +77,13 @@ const App = () => {
   const handleNumberChange = (event) => 
     setNewNumber(event.target.value)
 
-  const handleFilterChange = (event) => {
-    const v = event.target.value
-    setFilterName(v)
-    setFilteredPersons(persons.filter(person => person.name.toLowerCase().includes(v.toLowerCase())))
-  }
+  const handleFilterChange = (event) =>
+    setFilterName(event.target.value)
 
   const deletePerson = person => () => {
       if (window.confirm(`Delete ${person.name}?`)) {
         dataService.deleteData(person.id)
-        const copyPersons = persons.filter(p => p.id !== person.id)
-        setPersons(copyPersons)
-        setFilteredPersons(copyPersons.filter(p => p.name.toLowerCase().includes(filterName.toLowerCase())))
+        setPersons(persons.filter(p => p.id !== person.id))
       }
   }
 
@@ -136,7 +94,7 @@ const App = () => {
         filterName={filterName}
         handleFilterChange={handleFilterChange} />
       <h3>Add a new</h3>
-      <Notification message={successMessage} />
+      <SuccessNotification message={successMessage} />
       <ErrorNotification message={errorMessage} />
       <PersonForm 
         addNameNumber={addNameNumber}
